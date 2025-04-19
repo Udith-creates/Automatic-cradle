@@ -1,0 +1,63 @@
+#include <ESP8266WiFi.h>
+#include <EMailSender.h>
+
+// Wi-Fi credentials
+const char* ssid = "YOUR SSID";
+const char* password = "WIFI PASSKEY;
+
+// Email sender credentials (use Gmail App Password)
+EMailSender emailSend("YOUR EMAIL", "APP CODE");
+
+// Rain sensor pins
+const int rainAnalog = A0;      // Analog output from sensor
+const int rainDigital = 2;     // GPIO2 (Digital Output)
+
+bool emailSent = false;
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(rainDigital, INPUT);
+  WiFi.begin(ssid, password);
+
+  Serial.print("Connecting to Wi-Fi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nWi-Fi Connected. IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  int analogValue = analogRead(rainAnalog);
+  int digitalValue = digitalRead(rainDigital);
+
+  Serial.print("Analog Value: ");
+  Serial.print(analogValue);
+  Serial.print(" | Digital Value: ");
+  Serial.print(digitalValue);
+
+  if (digitalValue == LOW && !emailSent) {
+    Serial.println(" --> 💧 PEE Detected! Sending email...");
+
+    // Prepare and send email
+    EMailSender::EMailMessage message;
+    message.subject = "🌧 BABY Hygiene Alert";
+    message.message = "BABY HAS PEED. Please take necessary action!";
+
+    EMailSender::Response resp = emailSend.send("Recipeint email", message);
+    Serial.println("Email Sent:");
+    Serial.println(resp.status);
+    Serial.println(resp.code);
+    Serial.println(resp.desc);
+
+    emailSent = true;
+  } 
+  else if (digitalValue == HIGH) {
+    Serial.println(" --> ☀ No PEE");
+    emailSent = false;  // Reset flag when PEE stops
+  }
+
+  delay(2000);  // Wait 2 seconds
+}
